@@ -1,0 +1,71 @@
+# G1 并联关节 pjsol 参数。当前是左右踝，没有腰。
+# 标定：q_model = direction * (q_motor - zero_offset)
+#   channel     : LowCmd / LowState 电机索引
+#   direction   : +1 电机正向与模型一致，-1 相反
+#   zero_offset : 模型零位对应的电机角度
+# 长度单位 m，角度单位 deg。
+#
+# 与 config.yaml 里 ab 增益名字的对应关系：
+#   左踝 q1 = left_ankle_A（5），q2 = left_ankle_B（4）
+#   右踝 q1 = right_ankle_B（10），q2 = right_ankle_A（11）
+
+left_ankle:
+  type: M2RSS2Rx
+  geom:
+    F1: [0.035, 0.0, 0.150869]
+    F2: [0.0395, 0.0, 0.215869]
+    H1: [0.0219999, 0.0150001, 0.00799988]
+    H2: [0.0220003, -0.0149999, 0.00799988]
+    l1: 0.157
+    l2: 0.2215
+    r: 0.017
+    e: 0.0175579
+  joint_limit:
+    q1_min: 0.0
+    q1_max: 180.0
+    q2_min: -180.0
+    q2_max: 0.0
+    sphere_angle_max: 15.0
+  drive_map:
+    q1:
+      channel: 5
+      direction: 1
+      zero_offset: -76.4762
+    q2:
+      channel: 4
+      direction: 1
+      zero_offset: 74.2258
+  output_map:
+    roll: 5
+    pitch: 4
+
+right_ankle:
+  type: M2RSS2Rx
+  geom:
+    F1: [0.0395, 0.0, 0.215869]
+    F2: [0.035, 0.0, 0.150869]
+    H1: [0.0219999, 0.0150001, 0.00799988]
+    H2: [0.0220003, -0.0149999, 0.00799988]
+    l1: 0.2215
+    l2: 0.157
+    r: 0.017
+    e: 0.0175579
+  joint_limit:
+    q1_min: 0.0
+    q1_max: 180.0
+    q2_min: -180.0
+    q2_max: 0.0
+    sphere_angle_max: 15.0
+  drive_map:
+    # 右踝几何把左右支链对调：q1 在电机 B（10），q2 在电机 A（11）。
+    q1:
+      channel: 10
+      direction: 1
+      zero_offset: -74.2258
+    q2:
+      channel: 11
+      direction: 1
+      zero_offset: 76.4762
+  output_map:
+    roll: 11
+    pitch: 10

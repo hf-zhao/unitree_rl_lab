@@ -3,10 +3,14 @@
 #include "FSM/State_FixStand.h"
 #include "FSM/State_RLBase.h"
 #include "State_Mimic.h"
+#include "g1_pjsol_adaptor.hpp"
+
+#include <memory>
 
 std::unique_ptr<LowCmd_t> FSMState::lowcmd = nullptr;
 std::shared_ptr<LowState_t> FSMState::lowstate = nullptr;
 std::shared_ptr<Keyboard> FSMState::keyboard = std::make_shared<Keyboard>();
+static std::shared_ptr<G1PjsolAdaptor> g1_pjsol_adaptor;
 
 void init_fsm_state()
 {
@@ -42,6 +46,25 @@ int main(int argc, char** argv)
     if(!FSMState::lowcmd->check_mode_machine(FSMState::lowstate)) {
         spdlog::critical("Unmatched robot type.");
         exit(-1);
+    }
+
+    g1_pjsol_adaptor = std::make_shared<G1PjsolAdaptor>();
+    std::string pjsol_error;
+    if (!g1_pjsol_adaptor->load(param::config, param::proj_dir, &pjsol_error)) {
+        spdlog::critical("{}", pjsol_error);
+        exit(-1);
+    }
+    if (g1_pjsol_adaptor->enabled()) {
+        FSMState::lowcmd->msg_.mode_pr() = 1;
+        FSMState::pjsol_update_pr_state = [] {
+            g1_pjsol_adaptor->updatePrState(FSMState::lowstate->msg_);
+        };
+        FSMState::pjsol_update_ab_command = [](const std::string& fsm_state) {
+            g1_pjsol_adaptor->updateAbCommand(FSMState::lowcmd->msg_, fsm_state);
+        };
+        FSMState::pjsol_feedback_fault = [] {
+            return g1_pjsol_adaptor->feedbackFault();
+        };
     }
     
     // Initialize FSM

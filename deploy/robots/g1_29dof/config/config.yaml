@@ -1,3 +1,24 @@
+# enable 为 false 时走板载 PR，本节其余字段不生效。
+# 踝关节通道：
+#   PR  left_ankle_pitch=4  left_ankle_roll=5  right_ankle_pitch=10  right_ankle_roll=11
+#   AB  left_ankle_B=4      left_ankle_A=5     right_ankle_B=10      right_ankle_A=11
+# mode_pr=1 时腰 13/14 也会从 roll/pitch 变成腰 A/B。本适配器只转换参数文件里列出的关节。
+pjsol:
+  enable: false
+  param_file: config/g1_parallel_joint.yaml
+  command: position          # torque | position | hybrid
+  ab:
+    kp:
+      left_ankle_A: 40.0
+      left_ankle_B: 40.0
+      right_ankle_A: 40.0
+      right_ankle_B: 40.0
+    kd:
+      left_ankle_A: 1.0
+      left_ankle_B: 1.0
+      right_ankle_A: 1.0
+      right_ankle_B: 1.0
+
 FSM:
   _: # enabled fsms
     Passive:
@@ -16,6 +37,7 @@ FSM:
       type: Mimic
 
   Passive:
+    pjsol_command: torque
     transitions: 
       FixStand: LT + up.on_pressed
     mode: [
@@ -61,13 +83,14 @@ FSM:
       ]
     ]
   Velocity:
+    pjsol_command: hybrid
     transitions: 
       Passive: LT + B.on_pressed
       Mimic_Dance_102: LT(2s) + down.on_pressed
       Mimic_Gangnam_Style: LT(2s) + left.on_pressed
 
-    policy_dir: config/policy/velocity
-    # policy_dir: ../../../logs/rsl_rl/unitree_g1_29dof_velocity
+    # policy_dir: config/policy/velocity
+    policy_dir: ../../../logs/rsl_rl/unitree_g1_29dof_velocity
   Mimic_Dance_102:
     transitions: 
       Passive: LT + B.on_pressed
