@@ -17,8 +17,8 @@ from isaaclab.utils import configclass
 
 from unitree_rl_lab.assets.robots import unitree_actuators
 
-UNITREE_MODEL_DIR = "/workspace/unitree_model"  # Replace with the actual path to your unitree_model directory
-UNITREE_ROS_DIR = "/workspace/unitree_ros"  # Replace with the actual path to your unitree_ros package
+UNITREE_MODEL_DIR = "/home/zhf/unitree_model"  # Replace with the actual path to your unitree_model directory
+UNITREE_ROS_DIR = "/home/zhf/unitree_ros"  # Replace with the actual path to your unitree_ros package
 
 
 @configclass
@@ -447,24 +447,31 @@ UNITREE_G1_29DOF_CFG = UnitreeArticulationCfg(
             armature=0.01,
         ),
         "N5020-16": ImplicitActuatorCfg(
+            joint_names_expr=[".*_ankle_.*"],
+            effort_limit_sim=25,
+            velocity_limit_sim=37,
+            stiffness=40.0,
+            damping=2.0,
+            armature=0.01,
+        ),
+        "waist_roll_pitch": ImplicitActuatorCfg(
+            joint_names_expr=["waist_roll_joint", "waist_pitch_joint"],
+            effort_limit_sim=25,
+            velocity_limit_sim=37,
+            stiffness=200.0,
+            damping=5.0,
+            armature=0.01,
+        ),
+        "arms": ImplicitActuatorCfg(
             joint_names_expr=[
                 ".*_shoulder_.*",
                 ".*_elbow_.*",
                 ".*_wrist_roll.*",
-                ".*_ankle_.*",
-                "waist_roll_joint",
-                "waist_pitch_joint",
             ],
             effort_limit_sim=25,
             velocity_limit_sim=37,
             stiffness=40.0,
-            damping={
-                ".*_shoulder_.*": 1.0,
-                ".*_elbow_.*": 1.0,
-                ".*_wrist_roll.*": 1.0,
-                ".*_ankle_.*": 2.0,
-                "waist_.*_joint": 5.0,
-            },
+            damping=10.0,
             armature=0.01,
         ),
         "W4010-25": ImplicitActuatorCfg(
@@ -472,7 +479,7 @@ UNITREE_G1_29DOF_CFG = UnitreeArticulationCfg(
             effort_limit_sim=5,
             velocity_limit_sim=22,
             stiffness=40.0,
-            damping=1.0,
+            damping=10.0,
             armature=0.01,
         ),
     },
