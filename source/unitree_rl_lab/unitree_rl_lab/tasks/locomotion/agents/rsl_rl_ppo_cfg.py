@@ -34,3 +34,8 @@ class BasePPORunnerCfg(RslRlOnPolicyRunnerCfg):
         desired_kl=0.01,
         max_grad_norm=1.0,
     )
+
+
+@configclass
+class G1LockWaistPPORunnerCfg(BasePPORunnerCfg):
+    experiment_name = "unitree_g1_29dof_lock_waist_velocity"

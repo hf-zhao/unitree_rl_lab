@@ -516,6 +516,19 @@ UNITREE_G1_29DOF_CFG = UnitreeArticulationCfg(
     ],
 )
 
+# Waist roll/pitch are fixed joints in this URDF, so they are not articulation DOFs.
+UNITREE_G1_29DOF_LOCK_WAIST_URDF = (
+    asset_path=f"{UNITREE_ROS_DIR}/robots/g1_description/g1_29dof_lock_waist_rev_1_0.urdf"
+)
+UNITREE_G1_29DOF_LOCK_WAIST_CFG = UNITREE_G1_29DOF_CFG.replace(
+    spawn=UnitreeUrdfFileCfg(asset_path=UNITREE_G1_29DOF_LOCK_WAIST_URDF),
+    actuators={k: v for k, v in UNITREE_G1_29DOF_CFG.actuators.items() if k != "waist_roll_pitch"},
+    joint_sdk_names=[
+        "" if name in ("waist_roll_joint", "waist_pitch_joint") else name
+        for name in UNITREE_G1_29DOF_CFG.joint_sdk_names
+    ],
+)
+
 
 ARMATURE_5020 = 0.003609725
 ARMATURE_7520_14 = 0.010177520

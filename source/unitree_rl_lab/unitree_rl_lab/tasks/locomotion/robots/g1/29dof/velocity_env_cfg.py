@@ -19,6 +19,7 @@ from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
 from unitree_rl_lab.assets.robots.unitree import UNITREE_G1_29DOF_CFG as ROBOT_CFG
+from unitree_rl_lab.assets.robots.unitree import UNITREE_G1_29DOF_LOCK_WAIST_CFG as LOCK_WAIST_ROBOT_CFG
 from unitree_rl_lab.tasks.locomotion import mdp
 
 COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
@@ -425,6 +426,28 @@ class RobotEnvCfg(ManagerBasedRLEnvCfg):
 
 @configclass
 class RobotPlayEnvCfg(RobotEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.scene.num_envs = 32
+        self.scene.terrain.terrain_generator.num_rows = 2
+        self.scene.terrain.terrain_generator.num_cols = 10
+        self.commands.base_velocity.ranges = self.commands.base_velocity.limit_ranges
+
+
+@configclass
+class RobotLockWaistSceneCfg(RobotSceneCfg):
+    robot: ArticulationCfg = LOCK_WAIST_ROBOT_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+
+
+@configclass
+class RobotLockWaistEnvCfg(RobotEnvCfg):
+    """Same velocity-tracking task, with waist roll/pitch fixed by the URDF."""
+
+    scene: RobotLockWaistSceneCfg = RobotLockWaistSceneCfg(num_envs=4096, env_spacing=2.5)
+
+
+@configclass
+class RobotLockWaistPlayEnvCfg(RobotLockWaistEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.scene.num_envs = 32
