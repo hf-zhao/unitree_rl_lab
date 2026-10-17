@@ -441,9 +441,21 @@ class RobotLockWaistSceneCfg(RobotSceneCfg):
 
 @configclass
 class RobotLockWaistEnvCfg(RobotEnvCfg):
-    """Same velocity-tracking task, with waist roll/pitch fixed by the URDF."""
+    """Same velocity-tracking task, with waist roll/pitch fixed by the URDF.
+
+    The importer merges those fixed joints, so ``torso_link`` and ``waist_roll_link``
+    become part of ``waist_yaw_link``. Sensors and events that targeted the torso
+    have to follow that body.
+    """
 
     scene: RobotLockWaistSceneCfg = RobotLockWaistSceneCfg(num_envs=4096, env_spacing=2.5)
+
+    def __post_init__(self):
+        super().__post_init__()
+        torso_body = "waist_yaw_link"
+        self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/" + torso_body
+        self.events.add_base_mass.params["asset_cfg"].body_names = torso_body
+        self.events.base_external_force_torque.params["asset_cfg"].body_names = torso_body
 
 
 @configclass
