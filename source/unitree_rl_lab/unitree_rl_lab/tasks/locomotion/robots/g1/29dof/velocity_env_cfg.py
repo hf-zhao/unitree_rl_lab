@@ -181,7 +181,18 @@ class ActionsCfg:
     """Action specifications for the MDP."""
 
     JointPositionAction = mdp.JointPositionActionCfg(
-        asset_name="robot", joint_names=[".*"], scale=0.25, use_default_offset=True
+        asset_name="robot",
+        joint_names=[".*"],
+        scale={
+            ".*_hip_.*": 0.25,
+            ".*_knee_joint": 0.25,
+            ".*_ankle_.*": 0.25,
+            "waist_.*": 0.25,
+            ".*_wrist_.*": 0.25,
+            ".*_shoulder_.*": 0.1,
+            ".*_elbow_joint": 0.1,
+        },
+        use_default_offset=True,
     )
 
 
@@ -261,7 +272,7 @@ class RewardsCfg:
 
     joint_deviation_arms = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-0.1,
+        weight=-0.3,
         params={
             "asset_cfg": SceneEntityCfg(
                 "robot",
@@ -270,6 +281,16 @@ class RewardsCfg:
                     ".*_elbow_joint",
                     ".*_wrist_.*",
                 ],
+            )
+        },
+    )
+    joint_vel_arms = RewTerm(
+        func=mdp.joint_vel_l2,
+        weight=-0.01,
+        params={
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                joint_names=[".*_shoulder_.*_joint", ".*_elbow_joint"],
             )
         },
     )
@@ -285,10 +306,15 @@ class RewardsCfg:
             )
         },
     )
-    joint_deviation_legs = RewTerm(
+    joint_deviation_hip_roll = RewTerm(
         func=mdp.joint_deviation_l1,
         weight=-1.0,
-        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_roll_joint", ".*_hip_yaw_joint"])},
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_roll_joint"])},
+    )
+    joint_deviation_hip_yaw = RewTerm(
+        func=mdp.joint_deviation_l1,
+        weight=-0.1,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_yaw_joint"])},
     )
 
     # -- robot
@@ -352,7 +378,7 @@ class CurriculumCfg:
 
     terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
     lin_vel_cmd_levels = CurrTerm(mdp.lin_vel_cmd_levels)
-    ang_vel_cmd_levels = CurrTerm(mdp.ang_vel_cmd_levels)
+    ang_vel_cmd_levels = CurrTerm(mdp.ang_vel_cmd_levels, params={"reward_threshold": 0.55})
 
 
 @configclass
