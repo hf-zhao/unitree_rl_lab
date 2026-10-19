@@ -19,21 +19,54 @@ def format_value(x):
         return x
 
 
+def policy_joint_names(env: ManagerBasedRLEnv) -> list[str]:
+    """Joint order of the policy I/O.
+
+    This is the joint order of the action term when it drives every joint (it may be pinned with
+    ``preserve_order``), otherwise the articulation order. The deploy side indexes all joint
+    quantities in this order through ``joint_ids_map``.
+    """
+    asset: Articulation = env.scene["robot"]
+    for term in env.action_manager._terms.values():
+        names = getattr(term, "_joint_names", None)
+        if names is not None and len(names) == asset.num_joints:
+            return list(names)
+    return list(asset.data.joint_names)
+
+
+def policy_joint_ids_map(env: ManagerBasedRLEnv) -> list[int]:
+    """SDK motor index of each policy joint."""
+    joint_sdk_names = env.cfg.scene.robot.joint_sdk_names
+    joint_ids_map, _ = resolve_matching_names(policy_joint_names(env), joint_sdk_names, preserve_order=True)
+    return joint_ids_map
+
+
+def _to_policy_ids(isaac_ids, isaac_to_policy):
+    """Convert articulation joint indices into indices of the policy joint order."""
+    if isinstance(isaac_ids, slice) or isaac_ids is None:
+        return None
+    ids = [isaac_to_policy[i] for i in isaac_ids]
+    return None if ids == list(range(len(isaac_to_policy))) else ids
+
+
 def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir):
     asset: Articulation = env.scene["robot"]
     joint_sdk_names = env.cfg.scene.robot.joint_sdk_names
-    joint_ids_map, _ = resolve_matching_names(asset.data.joint_names, joint_sdk_names, preserve_order=True)
+    joint_names = policy_joint_names(env)
+    joint_ids_map = policy_joint_ids_map(env)
+    isaac_ids, _ = asset.find_joints(joint_names, preserve_order=True)
+    isaac_to_policy = {isaac_id: i for i, isaac_id in enumerate(isaac_ids)}
 
     cfg = {}  # noqa: SIM904
     cfg["joint_ids_map"] = joint_ids_map
     cfg["step_dt"] = env.cfg.sim.dt * env.cfg.decimation
     stiffness = np.zeros(len(joint_sdk_names))
-    stiffness[joint_ids_map] = asset.data.default_joint_stiffness[0].detach().cpu().numpy().tolist()
+    stiffness[joint_ids_map] = asset.data.default_joint_stiffness[0, isaac_ids].detach().cpu().numpy().tolist()
     cfg["stiffness"] = stiffness.tolist()
     damping = np.zeros(len(joint_sdk_names))
-    damping[joint_ids_map] = asset.data.default_joint_damping[0].detach().cpu().numpy().tolist()
+    damping[joint_ids_map] = asset.data.default_joint_damping[0, isaac_ids].detach().cpu().numpy().tolist()
     cfg["damping"] = damping.tolist()
-    cfg["default_joint_pos"] = asset.data.default_joint_pos[0].detach().cpu().numpy().tolist()
+    cfg["default_joint_pos"] = asset.data.default_joint_pos[0, isaac_ids].detach().cpu().numpy().tolist()
 
     # --- commands ---
     cfg["commands"] = {}
@@ -74,10 +107,7 @@ def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir):
             del term_cfg[_]
         cfg["actions"][action_name] = term_cfg
 
-        if action_term._joint_ids == slice(None):
-            cfg["actions"][action_name]["joint_ids"] = None
-        else:
-            cfg["actions"][action_name]["joint_ids"] = action_term._joint_ids
+        cfg["actions"][action_name]["joint_ids"] = _to_policy_ids(action_term._joint_ids, isaac_to_policy)
 
     # --- observations ---
     obs_names = env.observation_manager.active_terms["policy"]
@@ -100,10 +130,17 @@ def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir):
         if term_cfg.history_length == 0:
             term_cfg.history_length = 1
 
+        asset_cfg = term_cfg.params.get("asset_cfg")
         # clean cfg
         term_cfg = term_cfg.to_dict()
         for _ in ["func", "modifiers", "noise", "flatten_history_dim"]:
             del term_cfg[_]
+        if asset_cfg is not None and asset_cfg.name == "robot" and isinstance(asset_cfg.joint_ids, list):
+            ids = _to_policy_ids(asset_cfg.joint_ids, isaac_to_policy)
+            if ids is None:
+                del term_cfg["params"]["asset_cfg"]
+            else:
+                term_cfg["params"]["asset_cfg"]["joint_ids"] = ids
         cfg["observations"][obs_name] = term_cfg
 
     # --- save config file ---

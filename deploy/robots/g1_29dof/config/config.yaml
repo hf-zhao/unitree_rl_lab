@@ -1,3 +1,6 @@
+# 5: g1_29dof_rev_1_0, 6: g1_29dof_lock_waist_rev_1_0（锁腰，腰 roll/pitch 13/14 无电机）
+mode_machine: 6
+
 # enable 为 false 时走板载 PR，本节其余字段不生效。
 # 踝关节通道：
 #   PR  left_ankle_pitch=4  left_ankle_roll=5  right_ankle_pitch=10  right_ankle_roll=11
@@ -29,12 +32,13 @@ FSM:
       id: 3
       type: RLBase
 
-    Mimic_Dance_102: # uncomment to enable
-      id: 101
-      type: Mimic
-    Mimic_Gangnam_Style:
-      id: 102
-      type: Mimic
+    # Mimic 策略是按 29 自由度（带腰 roll/pitch）训练的，锁腰机型不要启用。
+    # Mimic_Dance_102:
+    #   id: 101
+    #   type: Mimic
+    # Mimic_Gangnam_Style:
+    #   id: 102
+    #   type: Mimic
 
   Passive:
     pjsol_command: torque
@@ -61,14 +65,14 @@ FSM:
     kp: [
       100., 100., 100., 150., 40., 40.,
       100., 100., 100., 150., 40., 40.,
-      200,200,200,
+      200,0,0,
       40,40,40,40,40,40,40,
       40,40,40,40,40,40,40,
     ]
     kd: [
       2,2,2,4,2,2,
       2,2,2,4,2,2,
-      5,5,5,
+      5,0,0,
       10,10,10,10,10,10,10,
       10,10,10,10,10,10,10,
     ]
@@ -86,11 +90,9 @@ FSM:
     pjsol_command: hybrid
     transitions: 
       Passive: LT + B.on_pressed
-      Mimic_Dance_102: LT(2s) + down.on_pressed
-      Mimic_Gangnam_Style: LT(2s) + left.on_pressed
 
-    # policy_dir: config/policy/velocity
-    policy_dir: ../../../logs/rsl_rl/unitree_g1_29dof_velocity
+    # 目录下没有 exported/ 时，取按名字排序最新且带 exported/ 的 run（play 一次会生成 exported/）。
+    policy_dir: ../../../logs/rsl_rl/unitree_g1_29dof_lock_waist_velocity
   Mimic_Dance_102:
     transitions: 
       Passive: LT + B.on_pressed

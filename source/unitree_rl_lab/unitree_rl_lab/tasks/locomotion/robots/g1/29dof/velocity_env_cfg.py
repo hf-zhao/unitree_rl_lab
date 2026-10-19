@@ -434,6 +434,42 @@ class RobotPlayEnvCfg(RobotEnvCfg):
         self.commands.base_velocity.ranges = self.commands.base_velocity.limit_ranges
 
 
+# Joint order of the lock-waist policy inputs and outputs.
+# Isaac Sim URDF importers do not agree on the articulation joint order once fixed joints are
+# merged (Isaac Lab 2.3.0 on the training server vs. 2.3.2 + importer 2.4.31 locally), so the
+# policy order is pinned here instead of following ``robot.data.joint_names``.
+# This is the order the 2026-10-17 checkpoints were trained with.
+LOCK_WAIST_POLICY_JOINT_NAMES = [
+    "left_hip_pitch_joint",
+    "right_hip_pitch_joint",
+    "waist_yaw_joint",
+    "left_hip_roll_joint",
+    "right_hip_roll_joint",
+    "left_hip_yaw_joint",
+    "right_hip_yaw_joint",
+    "left_knee_joint",
+    "right_knee_joint",
+    "left_shoulder_pitch_joint",
+    "right_shoulder_pitch_joint",
+    "left_ankle_pitch_joint",
+    "right_ankle_pitch_joint",
+    "left_shoulder_roll_joint",
+    "right_shoulder_roll_joint",
+    "left_ankle_roll_joint",
+    "right_ankle_roll_joint",
+    "left_shoulder_yaw_joint",
+    "right_shoulder_yaw_joint",
+    "left_elbow_joint",
+    "right_elbow_joint",
+    "left_wrist_roll_joint",
+    "right_wrist_roll_joint",
+    "left_wrist_pitch_joint",
+    "right_wrist_pitch_joint",
+    "left_wrist_yaw_joint",
+    "right_wrist_yaw_joint",
+]
+
+
 @configclass
 class RobotLockWaistSceneCfg(RobotSceneCfg):
     robot: ArticulationCfg = LOCK_WAIST_ROBOT_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
@@ -443,9 +479,9 @@ class RobotLockWaistSceneCfg(RobotSceneCfg):
 class RobotLockWaistEnvCfg(RobotEnvCfg):
     """Same velocity-tracking task, with waist roll/pitch fixed by the URDF.
 
-    The importer merges those fixed joints, so ``torso_link`` and ``waist_roll_link``
-    become part of ``waist_yaw_link``. Sensors and events that targeted the torso
-    have to follow that body.
+    Depending on the importer, ``torso_link`` and ``waist_roll_link`` are merged into
+    ``waist_yaw_link``. Sensors and events that targeted the torso follow ``waist_yaw_link``,
+    which exists in both cases.
     """
 
     scene: RobotLockWaistSceneCfg = RobotLockWaistSceneCfg(num_envs=4096, env_spacing=2.5)
@@ -457,12 +493,25 @@ class RobotLockWaistEnvCfg(RobotEnvCfg):
         self.events.add_base_mass.params["asset_cfg"].body_names = torso_body
         self.events.base_external_force_torque.params["asset_cfg"].body_names = torso_body
 
+        self.actions.JointPositionAction.joint_names = LOCK_WAIST_POLICY_JOINT_NAMES
+        self.actions.JointPositionAction.preserve_order = True
+        for group in (self.observations.policy, self.observations.critic):
+            for term in (group.joint_pos_rel, group.joint_vel_rel):
+                term.params["asset_cfg"] = SceneEntityCfg(
+                    "robot", joint_names=LOCK_WAIST_POLICY_JOINT_NAMES, preserve_order=True
+                )
+
 
 @configclass
 class RobotLockWaistPlayEnvCfg(RobotLockWaistEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.scene.num_envs = 32
-        self.scene.terrain.terrain_generator.num_rows = 2
-        self.scene.terrain.terrain_generator.num_cols = 10
+        self.scene.terrain.terrain_type = "plane"
+        self.scene.terrain.terrain_generator = None
+        self.curriculum.terrain_levels = None
+        self.curriculum.lin_vel_cmd_levels = None
+        self.curriculum.ang_vel_cmd_levels = None
         self.commands.base_velocity.ranges = self.commands.base_velocity.limit_ranges
+        self.observations.policy.enable_corruption = False
+        self.events.push_robot = None

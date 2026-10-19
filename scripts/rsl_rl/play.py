@@ -8,7 +8,6 @@
 """Launch Isaac Sim Simulator first."""
 
 import argparse
-from importlib.metadata import version
 
 from isaaclab.app import AppLauncher
 
@@ -49,6 +48,7 @@ import gymnasium as gym
 import os
 import time
 import torch
+import yaml
 
 from rsl_rl.runners import OnPolicyRunner
 
@@ -64,7 +64,26 @@ from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlVecEnvWrapper, expor
 from isaaclab_tasks.utils import get_checkpoint_path
 
 import unitree_rl_lab.tasks  # noqa: F401
+from unitree_rl_lab.utils.export_deploy_cfg import policy_joint_ids_map
 from unitree_rl_lab.utils.parser_cfg import parse_env_cfg
+
+
+def check_policy_joint_order(env, log_dir):
+    """Fail if the policy joint order differs from the one recorded at training time."""
+    deploy_cfg_path = os.path.join(log_dir, "params", "deploy.yaml")
+    if not os.path.isfile(deploy_cfg_path):
+        return
+    with open(deploy_cfg_path) as f:
+        trained = yaml.safe_load(f).get("joint_ids_map")
+    current = policy_joint_ids_map(env)
+    if trained is not None and list(trained) != list(current):
+        sdk_names = env.cfg.scene.robot.joint_sdk_names
+        raise RuntimeError(
+            "Policy joint order differs from training, the robot would fall immediately.\n"
+            f"  trained: {[sdk_names[i] for i in trained]}\n"
+            f"  current: {[sdk_names[i] for i in current]}\n"
+            "Pin the order with preserve_order on the action and joint observation terms."
+        )
 
 
 def main():
@@ -114,6 +133,8 @@ def main():
         print_dict(video_kwargs, nesting=4)
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
+    check_policy_joint_order(env.unwrapped, log_dir)
+
     # wrap around environment for rsl-rl
     env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
 
@@ -157,9 +178,10 @@ def main():
     dt = env.unwrapped.step_dt
 
     # reset environment
+    # Current Isaac Lab returns a TensorDict. Older 2.3 wrappers returned (obs, extras).
     obs = env.get_observations()
-    if version("rsl-rl-lib").startswith("2.3."):
-        obs, _ = env.get_observations()
+    if isinstance(obs, tuple):
+        obs = obs[0]
     timestep = 0
     # simulate environment
     while simulation_app.is_running():

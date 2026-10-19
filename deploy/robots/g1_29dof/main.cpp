@@ -36,15 +36,21 @@ int main(int argc, char** argv)
 
     std::cout << " --- Unitree Robotics --- \n";
     std::cout << "     G1-29dof Controller \n";
+    if (param::config["mode_machine"] && param::config["mode_machine"].as<int>() == 6) {
+        std::cout << "     (lock waist) \n";
+    }
 
     // Unitree DDS Config
     unitree::robot::ChannelFactory::Instance()->Init(0, vm["network"].as<std::string>());
 
     init_fsm_state();
 
-    FSMState::lowcmd->msg_.mode_machine() = 5; // 29dof
+    // 5: g1_29dof_rev_1_0, 6: g1_29dof_lock_waist_rev_1_0
+    const int mode_machine = param::config["mode_machine"] ? param::config["mode_machine"].as<int>() : 5;
+    FSMState::lowcmd->msg_.mode_machine() = mode_machine;
     if(!FSMState::lowcmd->check_mode_machine(FSMState::lowstate)) {
-        spdlog::critical("Unmatched robot type.");
+        spdlog::critical("Unmatched robot type. config mode_machine={}, robot mode_machine={}",
+            mode_machine, FSMState::lowstate->msg_.mode_machine());
         exit(-1);
     }
 
