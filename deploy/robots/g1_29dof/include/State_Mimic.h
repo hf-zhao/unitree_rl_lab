@@ -17,6 +17,7 @@ public:
         if (policy_thread.joinable()) {
             policy_thread.join();
         }
+        JointRecorder::instance().end();
     }
 
     class MotionLoader_;

@@ -6,6 +6,7 @@
 #include "FSMState.h"
 #include "isaaclab/envs/mdp/actions/joint_actions.h"
 #include "isaaclab/envs/mdp/terminations.h"
+#include "joint_recorder.h"
 
 class State_RLBase : public FSMState
 {
@@ -14,6 +15,8 @@ public:
     
     void enter()
     {
+        JointRecorder::instance().begin(getStateString());
+
         // set gain
         for (int i = 0; i < env->robot->data.joint_stiffness.size(); ++i)
         {
@@ -54,6 +57,7 @@ public:
         if (policy_thread.joinable()) {
             policy_thread.join();
         }
+        JointRecorder::instance().end();
     }
 
 private:

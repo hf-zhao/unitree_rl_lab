@@ -58,4 +58,5 @@ void State_RLBase::run()
     for(int i(0); i < env->robot->data.joint_ids_map.size(); i++) {
         lowcmd->msg_.motor_cmd()[env->robot->data.joint_ids_map[i]].q() = action[i];
     }
+    JointRecorder::instance().sample(lowstate, env->robot->data.joint_ids_map, action, env->episode_length);
 }
