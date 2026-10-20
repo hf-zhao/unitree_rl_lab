@@ -61,6 +61,19 @@ public:
         active_ = false;
     }
 
+    /** 刷完缓冲、关闭 csv 并停止后台线程。Ctrl+C / 进程退出前应调用。 */
+    void shutdown()
+    {
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            active_ = false;
+        }
+        stop_ = true;
+        if (worker_.joinable()) {
+            worker_.join();
+        }
+    }
+
     /**
      * @param joint_ids_map 策略关节下标 i -> SDK 电机下标
      * @param q_des 策略期望关节位置（策略顺序）
@@ -117,8 +130,7 @@ public:
 
     ~JointRecorder()
     {
-        stop_ = true;
-        if (worker_.joinable()) worker_.join();
+        shutdown();
     }
 
 private:
@@ -191,15 +203,15 @@ private:
 
         auto close_file = [&]() {
             if (!ofs.is_open()) return;
+            ofs.flush();
             ofs.close();
             spdlog::info("关节数据已保存至 {}", file_path.string());
         };
 
-        while (!stop_) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
+        // 将 pending_ 写出；stop 后也会再调用一次，避免丢缓冲、损坏 csv
+        auto flush_once = [&](bool allow_report) {
             bool active;
-            bool report = clock::now() - last_report >= std::chrono::seconds(1);
+            bool report = allow_report && (clock::now() - last_report >= std::chrono::seconds(1));
             std::array<LimitStat, kMaxJoints> stats;
             size_t dropped = 0;
             {
@@ -263,7 +275,13 @@ private:
                     spdlog::warn("JointRecorder 缓冲已满，近 1s 内丢弃 {} 条采样。", dropped);
                 }
             }
+        };
+
+        while (!stop_) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            flush_once(true);
         }
+        flush_once(false);  // 退出前刷完剩余采样
         close_file();
     }
 
