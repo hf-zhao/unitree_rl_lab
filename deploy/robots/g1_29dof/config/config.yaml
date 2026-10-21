@@ -1,6 +1,3 @@
-# 5: g1_29dof_rev_1_0, 6: g1_29dof_lock_waist_rev_1_0（锁腰，腰 roll/pitch 13/14 无电机）
-mode_machine: 6
-
 # SDK 电机顺序。限位单位 rad，取自 unitree_mujoco/unitree_robots/g1/g1_29dof.xml
 # JointRecorder (--record) 用 joint_names / joint_pos_limits 写 csv 与越限告警。
 joint_names: [
