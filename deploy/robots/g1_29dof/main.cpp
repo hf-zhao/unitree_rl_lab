@@ -4,13 +4,26 @@
 #include "FSM/State_RLBase.h"
 #include "State_Mimic.h"
 #include "g1_pjsol_adaptor.hpp"
+#include "joint_recorder.h"
 
+#include <atomic>
+#include <csignal>
 #include <memory>
 
 std::unique_ptr<LowCmd_t> FSMState::lowcmd = nullptr;
 std::shared_ptr<LowState_t> FSMState::lowstate = nullptr;
 std::shared_ptr<Keyboard> FSMState::keyboard = std::make_shared<Keyboard>();
 static std::shared_ptr<G1PjsolAdaptor> g1_pjsol_adaptor;
+
+static std::atomic<bool> g_running{true};
+
+static void on_signal(int)
+{
+    // 第二次 Ctrl+C 强制退出，防止 shutdown 卡住
+    if (!g_running.exchange(false)) {
+        std::_Exit(130);
+    }
+}
 
 void init_fsm_state()
 {
@@ -33,6 +46,9 @@ int main(int argc, char** argv)
 {
     // Load parameters
     auto vm = param::helper(argc, argv);
+
+    std::signal(SIGINT, on_signal);
+    std::signal(SIGTERM, on_signal);
 
     std::cout << " --- Unitree Robotics --- \n";
     std::cout << "     G1-29dof Controller \n";
@@ -73,6 +89,8 @@ int main(int argc, char** argv)
         };
     }
     
+    JointRecorder::instance().start();
+
     // Initialize FSM
     auto fsm = std::make_unique<CtrlFSM>(param::config["FSM"]);
     fsm->start();
@@ -80,11 +98,13 @@ int main(int argc, char** argv)
     std::cout << "Press [L2 + Up] to enter FixStand mode.\n";
     std::cout << "And then press [R1 + X] to start controlling the robot.\n";
 
-    while (true)
+    while (g_running)
     {
         sleep(1);
     }
+
+    fsm.reset();
+    JointRecorder::instance().shutdown();
     
     return 0;
 }
-

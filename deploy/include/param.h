@@ -43,6 +43,8 @@ inline std::filesystem::path bin_path;
 inline std::filesystem::path proj_dir;
 inline std::filesystem::path config_dir;
 inline YAML::Node config;
+inline bool record = false;
+inline std::filesystem::path record_dir;
 
 inline std::filesystem::path get_bin_path() {
     std::vector<char> path(1024);
@@ -129,6 +131,8 @@ inline po::variables_map helper(int argc, char** argv)
         ("help,h", "produce help message")
         ("version,v", "show version")
         ("log", "record log file")
+        ("record,r", "将策略期望位置与实测关节数据记录到 csv")
+        ("record-dir", po::value<std::string>()->default_value("logs"), "--record 输出目录，相对路径相对于工程目录")
         ("network,n", po::value<std::string>()->default_value(""), "dds network interface")
         ;
 
@@ -156,6 +160,15 @@ inline po::variables_map helper(int argc, char** argv)
     {
         std::filesystem::create_directories(proj_dir / "log");
         spdlog::create_logger(proj_dir.string() + "/log/log.txt");
+    }
+
+    record = vm.count("record") > 0;
+    record_dir = vm["record-dir"].as<std::string>();
+    if (record_dir.is_relative()) {
+        record_dir = proj_dir / record_dir;
+    }
+    if (record) {
+        spdlog::info("已启用关节数据记录，输出目录: {}", record_dir.string());
     }
 
     return vm;

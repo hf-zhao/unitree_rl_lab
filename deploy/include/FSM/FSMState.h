@@ -5,6 +5,7 @@
 #include "FSM/BaseState.h"
 #include "isaaclab/devices/keyboard/keyboard.h"
 #include "unitree_joystick_dsl.hpp"
+#include "joint_recorder.h"
 
 #include <functional>
 #include <string>
@@ -76,6 +77,10 @@ public:
 
     void post_run()
     {
+        // 在 AB 转换前采样，q_des 与实测都处在同一套关节坐标。
+        if (JointRecorder::started()) {
+            JointRecorder::instance().sample(lowstate, lowcmd, getStateString());
+        }
         // 启用 AB 模式时，把本拍 PR 指令写成实际 AB 电机指令后再发布。
         if (pjsol_update_ab_command) pjsol_update_ab_command(getStateString());
         lowcmd->unlockAndPublish();

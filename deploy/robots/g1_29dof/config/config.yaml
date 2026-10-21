@@ -1,6 +1,31 @@
 # 5: g1_29dof_rev_1_0, 6: g1_29dof_lock_waist_rev_1_0（锁腰，腰 roll/pitch 13/14 无电机）
 mode_machine: 6
 
+# SDK 电机顺序。限位单位 rad，取自 unitree_mujoco/unitree_robots/g1/g1_29dof.xml
+# JointRecorder (--record) 用 joint_names / joint_pos_limits 写 csv 与越限告警。
+joint_names: [
+  left_hip_pitch_joint, left_hip_roll_joint, left_hip_yaw_joint,
+  left_knee_joint, left_ankle_pitch_joint, left_ankle_roll_joint,
+  right_hip_pitch_joint, right_hip_roll_joint, right_hip_yaw_joint,
+  right_knee_joint, right_ankle_pitch_joint, right_ankle_roll_joint,
+  waist_yaw_joint, waist_roll_joint, waist_pitch_joint,
+  left_shoulder_pitch_joint, left_shoulder_roll_joint, left_shoulder_yaw_joint,
+  left_elbow_joint, left_wrist_roll_joint, left_wrist_pitch_joint, left_wrist_yaw_joint,
+  right_shoulder_pitch_joint, right_shoulder_roll_joint, right_shoulder_yaw_joint,
+  right_elbow_joint, right_wrist_roll_joint, right_wrist_pitch_joint, right_wrist_yaw_joint,
+]
+joint_pos_limits: [
+  [-2.5307, 2.8798], [-0.5236, 2.9671], [-2.7576, 2.7576],
+  [-0.087267, 2.8798], [-0.87267, 0.5236], [-0.2618, 0.2618],
+  [-2.5307, 2.8798], [-2.9671, 0.5236], [-2.7576, 2.7576],
+  [-0.087267, 2.8798], [-0.87267, 0.5236], [-0.2618, 0.2618],
+  [-2.618, 2.618], [-0.52, 0.52], [-0.52, 0.52],
+  [-3.0892, 2.6704], [-1.5882, 2.2515], [-2.618, 2.618],
+  [-1.0472, 2.0944], [-1.97222, 1.97222], [-1.61443, 1.61443], [-1.61443, 1.61443],
+  [-3.0892, 2.6704], [-2.2515, 1.5882], [-2.618, 2.618],
+  [-1.0472, 2.0944], [-1.97222, 1.97222], [-1.61443, 1.61443], [-1.61443, 1.61443],
+]
+
 # enable 为 false 时走板载 PR，本节其余字段不生效。
 # 踝关节通道：
 #   PR  left_ankle_pitch=4  left_ankle_roll=5  right_ankle_pitch=10  right_ankle_roll=11
